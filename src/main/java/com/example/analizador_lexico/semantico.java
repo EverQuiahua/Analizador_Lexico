@@ -30,7 +30,7 @@ public class semantico {
             System.out.println("--------------------");  // Separador entre cada análisis
         }
         verificarTipos(lista_expresiones);
-        //verificarOperaciones(lista_expresiones);// Llama a verificarTipos
+        verificarOperaciones(lista_expresiones);
     }
 
 
@@ -85,8 +85,9 @@ public class semantico {
                                 } else if (tipoVariable.equals("char")) {
                                     if (!lista_expresiones.get(i + 3).getExpresion().equals("'") ||
                                             !lista_expresiones.get(i + 5).getExpresion().equals("'")) {
+                                        String valor2 = lista_expresiones.get(i + 4).getExpresion();
                                         mostrarAlerta("Error Semántico",
-                                                "Asignación inválida: " + tipoVariable + " " + nombreVariable + " = " + valor);
+                                                "Asignación inválida: " + tipoVariable + " " + nombreVariable + " = " + valor2);
                                     } else {
                                         // Si la asignación es válida, guarda la variable con su tipo y nombre
                                         variables.put(nombreVariable, new VariableInfo(tipoVariable, nombreVariable));
@@ -126,8 +127,6 @@ public class semantico {
     private void verificarOperaciones(ObservableList<Analisis> lista_expresiones) {
         for (int i = 0; i < lista_expresiones.size(); i++) {
             String expresion = lista_expresiones.get(i).getExpresion();
-            String tipo = lista_expresiones.get(i).getTipo();
-
             // Verificar si la expresión es un operador matemático
             if (esOperadorMatematico(expresion)) {
                 // Obtener los operandos antes y después del operador
@@ -145,20 +144,6 @@ public class semantico {
                                 "Tipos incompatibles en la operación: " + operandoIzq + " " + expresion + " " + operandoDer);
                     } else {
                         System.out.println("Operación válida: " + operandoIzq + " " + expresion + " " + operandoDer);
-
-                        // Ahora verificamos la variable que recibirá el resultado de la operación
-                        if (i - 3 >= 0 && lista_expresiones.get(i - 2).getExpresion().equals("=")) {
-                            String variableDestino = lista_expresiones.get(i - 3).getExpresion();
-                            String tipoVariableDestino = obtenerTipo(variableDestino);
-
-                            // Verificar si el tipo de la variable de destino es compatible con el resultado de la operación
-                            if (!sonTiposCompatibles(tipoVariableDestino, tipoIzq) || !sonTiposCompatibles(tipoVariableDestino, tipoDer)) {
-                                mostrarAlerta("Error Semántico",
-                                        "Asignación inválida: La variable " + variableDestino + " no es compatible con el resultado de la operación.");
-                            } else {
-                                System.out.println("Asignación válida: " + variableDestino + " = " + operandoIzq + " " + expresion + " " + operandoDer);
-                            }
-                        }
                     }
                 }
             }
@@ -195,6 +180,11 @@ public class semantico {
     }
 
     private boolean sonTiposCompatibles(String tipo1, String tipo2) {
+        // Verificar si alguno de los tipos es nulo, en cuyo caso no son compatibles
+        if (tipo1 == null || tipo2 == null) {
+            return false;
+        }
+
         // Concatenación de strings
         if (tipo1.equals("String") && tipo2.equals("String")) return true;
         if (tipo1.equals("String") && tipo2.equals("char")) return true; // char puede concatenarse con String
@@ -207,13 +197,17 @@ public class semantico {
         if (tipo1.equals("int") && tipo2.equals("int")) return true;
         if (tipo1.equals("double") && (tipo2.equals("int") || tipo2.equals("double"))) return true;
         if (tipo1.equals("int") && tipo2.equals("double")) return true;
+        // Compatibilidad con float
+        if (tipo1.equals("float") && (tipo2.equals("int") || tipo2.equals("float"))) return true;
+        if (tipo1.equals("int") && tipo2.equals("float")) return true;
+        if (tipo1.equals("float") && tipo2.equals("double")) return true;
+        if (tipo1.equals("double") && tipo2.equals("float")) return true;
 
         // Si uno es String y el otro no, no son compatibles para operaciones matemáticas
         if (tipo1.equals("String") || tipo2.equals("String")) return false;
 
         return false; // Por defecto no son compatibles
     }
-
     // Clase interna para almacenar información de variables
     private static class VariableInfo {
         private String tipo;
@@ -247,7 +241,7 @@ public class semantico {
     // 3. Control de alcance (Scope)
     // HOLA HERI
     //Hola everaldo
-// cambios
+    // cambios
     // Aquí va el código para verificar el alcance de las variables y funciones.
     // Se asegura que las variables y funciones sean usadas solo dentro de su alcance.
     // Si una variable local es usada fuera de la función donde fue declarada,
