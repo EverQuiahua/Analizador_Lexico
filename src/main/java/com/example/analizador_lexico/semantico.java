@@ -245,6 +245,7 @@ public class semantico {
 
     // -----------------------------------------------------------------------------------
     // 3. Control de alcance (Scope)
+    // HOLA HERI
 // cambios
     // Aquí va el código para verificar el alcance de las variables y funciones.
     // Se asegura que las variables y funciones sean usadas solo dentro de su alcance.
