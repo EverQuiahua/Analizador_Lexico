@@ -31,6 +31,7 @@ public class semantico {
         }
         verificarTipos(lista_expresiones);
         verificarOperaciones(lista_expresiones);
+        asignacion_op(lista_expresiones);
     }
 
 
@@ -289,12 +290,59 @@ public class semantico {
 
     // -----------------------------------------------------------------------------------
     // 7. Asignaciones correctas
+    private void asignacion_op(ObservableList<Analisis> lista_expresiones) {
+        for (int i = 0; i < lista_expresiones.size(); i++) {
+            String expresion = lista_expresiones.get(i).getExpresion();
+            // Verificar si la expresión es un operador matemático
+            if (esOperadorMatematico(expresion)) {
+                // Obtener los operandos antes y después del operador
+                if (i - 1 >= 0 && i + 1 < lista_expresiones.size()) {
+                    String operandoIzq = lista_expresiones.get(i - 1).getExpresion();
+                    String operandoDer = lista_expresiones.get(i + 1).getExpresion();
+                    String valor = lista_expresiones.get(i - 3).getExpresion();
 
-    // Aquí va el código para verificar que las asignaciones sean correctas.
-    // Se asegura que una variable pueda almacenar un valor compatible con su tipo.
-    // Si una variable int recibe un valor double, se debe generar una advertencia
-    // o error si hay riesgo de pérdida de precisión.
+                    String tipoIzq = obtenerTipo(operandoIzq);
+                    String tipoDer = obtenerTipo(operandoDer);
 
+                    String tipoVal = obtenerTipo(valor);
+
+                    // Obtener el tipo resultante de la operación
+                    assert tipoIzq != null;
+                    String tipoResultado = obtenerTipoResultado(tipoIzq, tipoDer);
+                    System.out.println("Tipo"+tipoResultado);
+                    System.out.println(tipoVal);
+
+                    // Verificar si los tipos son iguales
+                    assert tipoVal != null;
+
+                    if (!tipoVal.equals(tipoResultado)) {
+                        // Mostrar alerta si los tipos no son iguales
+                        mostrarAlerta("Error Semántico", "Error: No se puede asignar el resultado de la operación a variable : " + valor );
+                    } else {
+                    }
+
+
+                }
+            }
+        }
+    }
+    private String obtenerTipoResultado(String tipo1, String tipo2) {
+        // Verificar si ambos tipos son iguales
+        if (tipo1.equals(tipo2)) {
+            return tipo1; // Si son del mismo tipo, el resultado es del mismo tipo
+        }
+        // Reglas de promoción de tipos en Java
+        if (tipo1.equals("double") || tipo2.equals("double")) {
+            return "double"; // Si uno de los dos es double, el resultado es double
+        } else if (tipo1.equals("float") || tipo2.equals("float")) {
+            return "float"; // Si uno de los dos es float y no hay un double, el resultado es float
+        } else if (tipo1.equals("long") || tipo2.equals("long")) {
+            return "long"; // Si uno de los dos es long y no hay ni float ni double, el resultado es long
+        } else if(tipo1.equals("String") || tipo2.equals("String")) {
+             return "String"; // Si uno de los dos es String, el resultado será una concatenación y será String
+        }
+        return "error";
+    }
     // FIN 7. Asignaciones correctas
     //-------------------------------------------------
 
