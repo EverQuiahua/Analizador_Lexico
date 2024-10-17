@@ -83,21 +83,24 @@ public class semantico {
                                         }
                                     }
                                 } else if (tipoVariable.equals("char")) {
-                                    if (!lista_expresiones.get(i + 3).getExpresion().equals("'") ||
-                                            !lista_expresiones.get(i + 5).getExpresion().equals("'")) {
-                                        String valor2 = lista_expresiones.get(i + 4).getExpresion();
-                                        mostrarAlerta("Error Semántico",
-                                                "Asignación inválida: " + tipoVariable + " " + nombreVariable + " = " + valor2);
-                                    } else {
-                                        // Si la asignación es válida, guarda la variable con su tipo y nombre
-                                        variables.put(nombreVariable, new VariableInfo(tipoVariable, nombreVariable));
+                                    String valor2 = lista_expresiones.get(i + 4).getExpresion();
+                                    System.out.println(valor2);
 
-                                        // Imprime el contenido del mapa 'variables' en consola
-                                        for (Map.Entry<String, VariableInfo> entry : variables.entrySet()) {
-                                            VariableInfo info = entry.getValue();
-                                            System.out.println("Variable: " + info.getNombre() + ", Tipo: " + info.getTipo());
+                                        // Verifica que el valor sea compatible con un char
+                                        if (!esValorCompatible("char", valor2)) {
+                                            mostrarAlerta("Error Semántico",
+                                                    "Asignación inválida: " + tipoVariable + " " + nombreVariable);
+                                        } else {
+                                            System.out.println("Asignación válida para char: " + nombreVariable + " = " + valor2);
+                                            // Si la asignación es válida, guarda la variable con su tipo y nombre
+                                            variables.put(nombreVariable, new VariableInfo(tipoVariable, nombreVariable));
+
+                                            // Imprime el contenido del mapa 'variables' en consola
+                                            for (Map.Entry<String, VariableInfo> entry : variables.entrySet()) {
+                                                VariableInfo info = entry.getValue();
+                                                System.out.println("Variable: " + info.getNombre() + ", Tipo: " + info.getTipo());
+                                            }
                                         }
-                                    }
                                 } else {
                                     // Verifica si el valor es compatible con el tipo de variable
                                     if (!esValorCompatible(tipoVariable, valor)) {
@@ -168,7 +171,7 @@ public class semantico {
             case "float":
                 return valor.matches("\\d+\\.\\d+f"); // Números con decimales terminados en 'f'
             case "char":
-                return valor.matches("'.'"); // Un solo carácter entre comillas simples
+                return valor.matches("[a-zA-Z]"); // Un solo carácter entre comillas simples
             case "boolean":
                 return valor.equals("true") || valor.equals("false"); // Solo true o false
             case "String":
@@ -211,6 +214,7 @@ public class semantico {
     // Clase interna para almacenar información de variables
     private static class VariableInfo {
         private String tipo;
+
         private String nombre;
         public VariableInfo(String tipo, String nombre) {
             this.tipo = tipo;
