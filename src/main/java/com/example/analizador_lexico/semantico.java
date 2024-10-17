@@ -32,6 +32,7 @@ public class semantico {
         verificarTipos(lista_expresiones);
         verificarOperaciones(lista_expresiones);
         asignacion_op(lista_expresiones);
+        verificarRetornoFuncion(lista_expresiones);
     }
 
 
@@ -349,11 +350,41 @@ public class semantico {
     // -----------------------------------------------------------------------------------
     // 8. Verificación de retornos de funciones
 
-    // Aquí va el código para verificar que las funciones devuelvan un valor
-    // adecuado de acuerdo con su tipo de retorno. Si una función declara
-    // que devuelve un int pero no devuelve nada o devuelve otro tipo,
-    // se generará un error semántico.
+    // Metodo para verificar si el retorno de la función es adecuado
+    private void verificarRetornoFuncion(ObservableList<Analisis> lista_expresiones) {
+        for (int i = 0; i < lista_expresiones.size(); i++) {
+            Analisis analisis = lista_expresiones.get(i);
+            String tipo = analisis.getTipo();
 
+            // Verificar si el tipo de la expresión es una función
+            if (tipo.equals("Función")) {
+                String tipoF = lista_expresiones.get(i - 1).getExpresion();
+                // Seguir recorriendo hasta encontrar el 'return'
+                for (int j = i + 1; j < lista_expresiones.size(); j++) {
+                    Analisis analisisReturn = lista_expresiones.get(j);
+                    String expresionReturn = analisisReturn.getExpresion();
+                    String tipoReturn = analisisReturn.getTipo();
+                    // Verificar si es una palabra reservada y la expresión es 'return'
+                    if (tipoReturn.equals("Palabra Reservada") && expresionReturn.equals("return")) {
+                        String tipoR = lista_expresiones.get(j + 1).getExpresion();
+                        String valR = obtenerTipo(tipoR);
+                        // Comparar tipoF y valR
+                        if (!tipoF.equals(valR)) {
+                            // Mostrar alerta de error semántico si los tipos son diferentes
+                            mostrarAlerta("Error Semántico",
+                                    "El tipo de retorno de la función no coincide con el tipo esperado. " +
+                                            "Esperado: " + tipoF);
+                        } else {
+                            // Imprimir mensaje si el tipo de retorno es correcto
+                            System.out.println("Tipo de retorno correcto para la función: " + tipoF);
+                        }
+
+                        break; // Detener la búsqueda cuando se encuentra el return
+                    }
+                }
+            }
+        }
+    }
     // FIN 8. Verificación de retornos de funciones
     //-------------------------------------------------
 
