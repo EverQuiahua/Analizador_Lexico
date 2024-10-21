@@ -4,13 +4,16 @@ import javafx.collections.ObservableList;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
 public class semantico {
     private HelloController helloController;
     private HashMap<String, VariableInfo> variables;
+    public List<VariableF> variablesF = new ArrayList<>();
 
     // Constructor que recibe la instancia de HelloController
     public semantico(HelloController helloController) {
@@ -57,8 +60,11 @@ public class semantico {
                             String tipoVariable = expresion; // La palabra reservada (ejemplo: "int", "String", etc.)
                             String nombreVariable = lista_expresiones.get(i + 1).getExpresion(); // Nombre de la variable
 
-                            // Verificar si el valor es una variable, y en ese caso ignorar las verificaciones de comillas
-                            if (lista_expresiones.get(i + 3).getTipo().equals("Variable")) {
+                            // Verificar si el valor es una función
+                            if (lista_expresiones.get(i + 3).getTipo().equals("Función")) {
+                                System.out.println("Se ha encontrado una función en la asignación, omitiendo la verificación de asignación.");
+                                // Puedes agregar aquí alguna lógica si quieres hacer algo con la función.
+                            } else if (lista_expresiones.get(i + 3).getTipo().equals("Variable")) {
                                 // El valor es una variable, no es necesario hacer las verificaciones de comillas
                                 variables.put(nombreVariable, new VariableInfo(tipoVariable, nombreVariable));
 
@@ -107,7 +113,7 @@ public class semantico {
                                     // Verifica si el valor es compatible con el tipo de variable
                                     if (!esValorCompatible(tipoVariable, valor)) {
                                         mostrarAlerta("Error Semántico",
-                                                "Asignación inválida: " + tipoVariable + " " + nombreVariable + " = " + valor);
+                                                "Asignación inválida pp: " + tipoVariable + " " + nombreVariable + " = " + valor);
                                     } else {
                                         // Si la asignación es válida, guarda la variable con su tipo y nombre
                                         variables.put(nombreVariable, new VariableInfo(tipoVariable, nombreVariable));
@@ -142,13 +148,18 @@ public class semantico {
                     // Obtener los tipos de los operandos
                     String tipoIzq = obtenerTipo(operandoIzq);
                     String tipoDer = obtenerTipo(operandoDer);
-
-                    // Verificar si los tipos son compatibles para la operación matemática
-                    if (!sonTiposCompatibles(tipoIzq, tipoDer)) {
-                        mostrarAlerta("Error Semántico",
-                                "Tipos incompatibles en la operación: " + operandoIzq + " " + expresion + " " + operandoDer);
+                    // Verificar si ambos tipos son null
+                    if (tipoIzq == null && tipoDer == null) {
+                        // Si ambos son null, no hacemos nada
+                        System.out.println("Ambos operandos son null. No se realiza ninguna verificación de tipos.");
                     } else {
-                        System.out.println("Operación válida: " + operandoIzq + " " + expresion + " " + operandoDer);
+                        // Verificar si los tipos son compatibles para la operación matemática
+                        if (!sonTiposCompatibles(tipoIzq, tipoDer)) {
+                            mostrarAlerta("Error Semántico",
+                                    "Tipos incompatibles en la operación: " + operandoIzq + " " + expresion + " " + operandoDer);
+                        } else {
+                            System.out.println("Operación válida: " + operandoIzq + " " + expresion + " " + operandoDer);
+                        }
                     }
                 }
             }
@@ -301,27 +312,32 @@ public class semantico {
                     String operandoIzq = lista_expresiones.get(i - 1).getExpresion();
                     String operandoDer = lista_expresiones.get(i + 1).getExpresion();
                     String valor = lista_expresiones.get(i - 3).getExpresion();
+                    String valor2 = lista_expresiones.get(i - 3).getTipo();
+                    System.out.println("ssss  " + valor2);
 
                     String tipoIzq = obtenerTipo(operandoIzq);
                     String tipoDer = obtenerTipo(operandoDer);
+                    if (valor2.equals("Variable")) {
+                        String tipoVal = obtenerTipo(valor);
 
-                    String tipoVal = obtenerTipo(valor);
+                        // Obtener el tipo resultante de la operación
+                        assert tipoIzq != null;
+                        String tipoResultado = obtenerTipoResultado(tipoIzq, tipoDer);
+                        System.out.println("Tipo"+tipoResultado);
+                        System.out.println(tipoVal);
 
-                    // Obtener el tipo resultante de la operación
-                    assert tipoIzq != null;
-                    String tipoResultado = obtenerTipoResultado(tipoIzq, tipoDer);
-                    System.out.println("Tipo"+tipoResultado);
-                    System.out.println(tipoVal);
+                        // Verificar si los tipos son iguales
+                        assert tipoVal != null;
 
-                    // Verificar si los tipos son iguales
-                    assert tipoVal != null;
+                        if (!tipoVal.equals(tipoResultado)) {
+                            // Mostrar alerta si los tipos no son iguales
+                            mostrarAlerta("Error Semántico", "Error: No se puede asignar el resultado de la operación a variable : " + valor );
+                        } else {
+                        }
 
-                    if (!tipoVal.equals(tipoResultado)) {
-                        // Mostrar alerta si los tipos no son iguales
-                        mostrarAlerta("Error Semántico", "Error: No se puede asignar el resultado de la operación a variable : " + valor );
                     } else {
-                    }
 
+                    }
 
                 }
             }
@@ -358,33 +374,130 @@ public class semantico {
 
             // Verificar si el tipo de la expresión es una función
             if (tipo.equals("Función")) {
-                String tipoF = lista_expresiones.get(i - 1).getExpresion();
+                String tipoF = lista_expresiones.get(i - 1).getExpresion(); // Tipo esperado de retorno de la función
+
+
                 // Seguir recorriendo hasta encontrar el 'return'
                 for (int j = i + 1; j < lista_expresiones.size(); j++) {
                     Analisis analisisReturn = lista_expresiones.get(j);
                     String expresionReturn = analisisReturn.getExpresion();
                     String tipoReturn = analisisReturn.getTipo();
+
                     // Verificar si es una palabra reservada y la expresión es 'return'
                     if (tipoReturn.equals("Palabra Reservada") && expresionReturn.equals("return")) {
-                        String tipoR = lista_expresiones.get(j + 1).getExpresion();
-                        String valR = obtenerTipo(tipoR);
-                        // Comparar tipoF y valR
-                        if (!tipoF.equals(valR)) {
-                            // Mostrar alerta de error semántico si los tipos son diferentes
-                            mostrarAlerta("Error Semántico",
-                                    "El tipo de retorno de la función no coincide con el tipo esperado. " +
-                                            "Esperado: " + tipoF);
-                        } else {
-                            // Imprimir mensaje si el tipo de retorno es correcto
-                            System.out.println("Tipo de retorno correcto para la función: " + tipoF);
-                        }
 
-                        break; // Detener la búsqueda cuando se encuentra el return
+
+                            for (int k = i + 1; k < lista_expresiones.size(); k++) {
+                                Analisis analisisParametro = lista_expresiones.get(k);
+                                String expresion = analisisParametro.getExpresion();
+                                String tipoParametro = analisisParametro.getTipo();
+
+                                // Buscar los parámetros de la función hasta que se cierre el paréntesis
+                                if (tipoParametro.equals("Variable")) {
+                                    // Obtener el tipo de la variable, que se encuentra en la posición anterior
+                                    String tipoVariable = lista_expresiones.get(k - 1).getExpresion(); // Obtener el tipo desde la posición anterior
+                                    // Agregar la variable junto con su tipo
+                                    variablesF.add(new VariableF(expresion, tipoVariable));
+                                }
+                                // Si encontramos un símbolo que cierra el paréntesis, terminamos de buscar
+                                if (expresion.equals(")")) {
+                                    break;
+                                }
+
+                            }
+
+                            // Imprimir las variables y sus tipos
+                            System.out.println("Variables de la función " + analisis.getExpresion() + ": ");
+                            for (VariableF variable : variablesF) {
+                                System.out.println(variable);
+                            }
+
+                            // Verificar límite
+                            if (j + 1 >= lista_expresiones.size()) break;
+                            Analisis analisisResultado = lista_expresiones.get(j + 1);
+                            String tipoR;
+                            String operador;
+
+                            // Verificar si hay un operador en la expresión
+                            if (j + 2 < lista_expresiones.size()) {
+                                operador = lista_expresiones.get(j + 2).getExpresion();
+
+                            } else {
+                                operador = null; // No hay operador
+                            }
+
+                            // Verificar si la expresión después de return es una operación
+                            if (esOperadorMatematico (operador)) {
+                                if (j + 3 >= lista_expresiones.size()) break; // Verificar límite
+                                String operando1 = lista_expresiones.get(j + 1).getExpresion();
+                                String operando2 = lista_expresiones.get(j + 3).getExpresion(); // Asumimos que hay un operador en j+2
+                                String tipoOperando1 = obtenerTipoF(operando1);
+                                String tipoOperando2 = obtenerTipoF(operando2);
+
+
+
+                                // Determinar el tipo resultante de la operación
+                                tipoR = obtenerTipoResultado( tipoOperando1 , tipoOperando2);
+                            } else {
+                                tipoR = obtenerTipo(analisisResultado.getExpresion());
+                            }
+
+                            // Comparar el tipo esperado (tipoF) con el tipo real de retorno (tipoR)
+                            if (!tipoF.equals(tipoR)) {
+                                // Mostrar alerta de error semántico si los tipos son diferentes
+                                mostrarAlerta("Error Semántico",
+                                        "El tipo de retorno de la función no coincide con el tipo esperado. " +
+                                                "Esperado: " + tipoF + ", Encontrado: " + tipoR);
+                            } else {
+                                // Imprimir mensaje si el tipo de retorno es correcto
+                                System.out.println("Tipo de retorno correcto para la función: " + tipoF);
+                            }
+
+                            break; // Detener la búsqueda cuando se encuentra el return
+
+
                     }
                 }
             }
         }
     }
+    private String obtenerTipoF(String variableF) {
+        // Busca la variableF en la lista de variables
+        for (VariableF variable : variablesF) {
+            if (variable.getNombre().equals(variableF)) {
+                // Retorna el tipo si la variable existe
+                return variable.getTipo();
+            }
+        }
+        // Retorna null si no se encontró la variable
+        return null;
+    }
+
+    public class VariableF {
+        private String nombre;
+        private String tipo;
+
+        public VariableF(String nombre, String tipo) {
+            this.nombre = nombre;
+            this.tipo = tipo;
+        }
+
+        public String getNombre() {
+            return nombre;
+        }
+
+        public String getTipo() {
+            return tipo;
+        }
+
+        @Override
+        public String toString() {
+            return "Nombre: " + nombre + ", Tipo: " + tipo;
+        }
+    }
+
+
+
     // FIN 8. Verificación de retornos de funciones
     //-------------------------------------------------
 
