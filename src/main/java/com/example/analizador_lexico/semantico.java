@@ -32,10 +32,11 @@ public class semantico {
             System.out.println("Columna: " + analisis.getColumna());
             System.out.println("--------------------");  // Separador entre cada análisis
         }
+
+        verificarRetornoFuncion(lista_expresiones);
         verificarTipos(lista_expresiones);
         verificarOperaciones(lista_expresiones);
         asignacion_op(lista_expresiones);
-        verificarRetornoFuncion(lista_expresiones);
     }
 
 
@@ -136,33 +137,57 @@ public class semantico {
     }
 
     private void verificarOperaciones(ObservableList<Analisis> lista_expresiones) {
+        // Inicializamos una variable para almacenar el tipo resultante acumulado
+        String tipoResultadoAcumulado = null;
+
         for (int i = 0; i < lista_expresiones.size(); i++) {
             String expresion = lista_expresiones.get(i).getExpresion();
+
             // Verificar si la expresión es un operador matemático
             if (esOperadorMatematico(expresion)) {
-                // Obtener los operandos antes y después del operador
+                // Verificar que tenemos operandos antes y después del operador
                 if (i - 1 >= 0 && i + 1 < lista_expresiones.size()) {
-                    String operandoIzq = lista_expresiones.get(i - 1).getExpresion();
-                    String operandoDer = lista_expresiones.get(i + 1).getExpresion();
+                    String operandoIzq;
+
+                    // Si es la primera operación, usamos los operandos iniciales
+                    if (tipoResultadoAcumulado == null) {
+                        operandoIzq = lista_expresiones.get(i - 1).getExpresion(); // Primer operando
+                    } else {
+                        // Usamos el tipo acumulado como el operando izquierdo
+                        operandoIzq = tipoResultadoAcumulado;
+                    }
+
+                    String operandoDer = lista_expresiones.get(i + 1).getExpresion(); // Segundo operando
 
                     // Obtener los tipos de los operandos
-                    String tipoIzq = obtenerTipo(operandoIzq);
+                    String tipoIzq = (tipoResultadoAcumulado == null) ? obtenerTipo(operandoIzq) : tipoResultadoAcumulado;
                     String tipoDer = obtenerTipo(operandoDer);
+
                     // Verificar si ambos tipos son null
                     if (tipoIzq == null && tipoDer == null) {
-                        // Si ambos son null, no hacemos nada
                         System.out.println("Ambos operandos son null. No se realiza ninguna verificación de tipos.");
                     } else {
                         // Verificar si los tipos son compatibles para la operación matemática
                         if (!sonTiposCompatibles(tipoIzq, tipoDer)) {
                             mostrarAlerta("Error Semántico",
                                     "Tipos incompatibles en la operación: " + operandoIzq + " " + expresion + " " + operandoDer);
+                            return; // Detenemos la verificación si hay un error de tipos
                         } else {
                             System.out.println("Operación válida: " + operandoIzq + " " + expresion + " " + operandoDer);
+
+                            // Calcular el tipo resultante de la operación y acumularlo
+                            tipoResultadoAcumulado = obtenerTipoResultado(tipoIzq, tipoDer);
                         }
                     }
+                    // Saltamos al siguiente operador después del segundo operando
+                    i++; // Avanzamos para que el siguiente ciclo siga desde el próximo operador
                 }
             }
+        }
+
+        // Aquí podrías validar si el tipo acumulado es compatible con el tipo final esperado (si es necesario)
+        if (tipoResultadoAcumulado != null) {
+            System.out.println("Tipo final resultante de la expresión: " + tipoResultadoAcumulado);
         }
     }
 
@@ -303,42 +328,53 @@ public class semantico {
     // -----------------------------------------------------------------------------------
     // 7. Asignaciones correctas
     private void asignacion_op(ObservableList<Analisis> lista_expresiones) {
+        // Inicializamos una variable para almacenar el tipo resultante acumulado
+        String tipoResultadoAcumulado = null;
+        String valor = null;
+        String tipoVariable = null;
+
         for (int i = 0; i < lista_expresiones.size(); i++) {
             String expresion = lista_expresiones.get(i).getExpresion();
+
             // Verificar si la expresión es un operador matemático
             if (esOperadorMatematico(expresion)) {
                 // Obtener los operandos antes y después del operador
                 if (i - 1 >= 0 && i + 1 < lista_expresiones.size()) {
                     String operandoIzq = lista_expresiones.get(i - 1).getExpresion();
                     String operandoDer = lista_expresiones.get(i + 1).getExpresion();
-                    String valor = lista_expresiones.get(i - 3).getExpresion();
-                    String valor2 = lista_expresiones.get(i - 3).getTipo();
-                    System.out.println("ssss  " + valor2);
 
-                    String tipoIzq = obtenerTipo(operandoIzq);
-                    String tipoDer = obtenerTipo(operandoDer);
-                    if (valor2.equals("Variable")) {
-                        String tipoVal = obtenerTipo(valor);
-
-                        // Obtener el tipo resultante de la operación
-                        assert tipoIzq != null;
-                        String tipoResultado = obtenerTipoResultado(tipoIzq, tipoDer);
-                        System.out.println("Tipo"+tipoResultado);
-                        System.out.println(tipoVal);
-
-                        // Verificar si los tipos son iguales
-                        assert tipoVal != null;
-
-                        if (!tipoVal.equals(tipoResultado)) {
-                            // Mostrar alerta si los tipos no son iguales
-                            mostrarAlerta("Error Semántico", "Error: No se puede asignar el resultado de la operación a variable : " + valor );
-                        } else {
-                        }
-
-                    } else {
-
+                    // Si estamos al principio, obtener la variable a la que se asigna el resultado
+                    if (i - 3 >= 0) {
+                        valor = lista_expresiones.get(i - 3).getExpresion(); // Variable a la que se asigna
+                        tipoVariable = lista_expresiones.get(i - 3).getTipo(); // Tipo de la variable
                     }
 
+                    // Obtener los tipos de los operandos izquierdo y derecho
+                    String tipoIzq = obtenerTipo(operandoIzq);
+                    String tipoDer = obtenerTipo(operandoDer);
+
+                    if (tipoVariable != null && tipoVariable.equals("Variable")) {
+                        // Si estamos en la primera operación, obtenemos el tipo de la variable
+                        if (tipoResultadoAcumulado == null) {
+                            tipoResultadoAcumulado = obtenerTipoResultado(tipoIzq, tipoDer);
+                        } else {
+                            // Si ya tenemos un resultado acumulado, lo usamos como operando izquierdo
+                            tipoResultadoAcumulado = obtenerTipoResultado(tipoResultadoAcumulado, tipoDer);
+                        }
+
+                        System.out.println("Tipo resultante acumulado: " + tipoResultadoAcumulado);
+                        System.out.println("Tipo de la variable: " + obtenerTipo(valor));
+
+                        // Verificar si los tipos coinciden
+                        if (!obtenerTipo(valor).equals(tipoResultadoAcumulado)) {
+                            // Mostrar alerta si los tipos no son iguales
+                            mostrarAlerta("Error Semántico", "Error: No se puede asignar el resultado de la operación a la variable: " + valor);
+                            return; // Detener si hay un error
+                        }
+
+                        // Avanzamos al siguiente operador
+                        i += 1; // Saltamos el operando derecho que ya se procesó
+                    }
                 }
             }
         }
@@ -376,7 +412,6 @@ public class semantico {
             if (tipo.equals("Función")) {
                 String tipoF = lista_expresiones.get(i - 1).getExpresion(); // Tipo esperado de retorno de la función
 
-
                 // Seguir recorriendo hasta encontrar el 'return'
                 for (int j = i + 1; j < lista_expresiones.size(); j++) {
                     Analisis analisisReturn = lista_expresiones.get(j);
@@ -387,61 +422,102 @@ public class semantico {
                     if (tipoReturn.equals("Palabra Reservada") && expresionReturn.equals("return")) {
 
 
-                            for (int k = i + 1; k < lista_expresiones.size(); k++) {
-                                Analisis analisisParametro = lista_expresiones.get(k);
-                                String expresion = analisisParametro.getExpresion();
-                                String tipoParametro = analisisParametro.getTipo();
+                        for (int k = i + 1; k < lista_expresiones.size(); k++) {
+                            Analisis analisisParametro = lista_expresiones.get(k);
+                            String expresion = analisisParametro.getExpresion();
+                            String tipoParametro = analisisParametro.getTipo();
 
-                                // Buscar los parámetros de la función hasta que se cierre el paréntesis
-                                if (tipoParametro.equals("Variable")) {
-                                    // Obtener el tipo de la variable, que se encuentra en la posición anterior
-                                    String tipoVariable = lista_expresiones.get(k - 1).getExpresion(); // Obtener el tipo desde la posición anterior
-                                    // Agregar la variable junto con su tipo
+                            // Buscar los parámetros de la función hasta que se cierre el paréntesis
+                            if (tipoParametro.equals("Variable")) {
+                                // Obtener el tipo de la variable, que se encuentra en la posición anterior
+                                String tipoVariable = lista_expresiones.get(k - 1).getExpresion(); // Obtener el tipo desde la posición anterior
+
+                                // Verificar si la variable ya está en la lista
+                                boolean existe = variablesF.stream().anyMatch(var -> var.getNombre().equals(expresion));
+
+                                // Si la variable no está en la lista, agregarla
+                                if (!existe) {
                                     variablesF.add(new VariableF(expresion, tipoVariable));
+                                    variables.put(expresion, new VariableInfo(tipoVariable, expresion));
                                 }
-                                // Si encontramos un símbolo que cierra el paréntesis, terminamos de buscar
-                                if (expresion.equals(")")) {
-                                    break;
-                                }
-
                             }
 
-                            // Imprimir las variables y sus tipos
-                            System.out.println("Variables de la función " + analisis.getExpresion() + ": ");
-                            for (VariableF variable : variablesF) {
-                                System.out.println(variable);
+                            // Si encontramos un símbolo que cierra el paréntesis, terminamos de buscar
+                            if (expresion.equals("return")) {
+                                break;
                             }
+                        }
 
-                            // Verificar límite
-                            if (j + 1 >= lista_expresiones.size()) break;
-                            Analisis analisisResultado = lista_expresiones.get(j + 1);
-                            String tipoR;
-                            String operador;
+                        // Imprimir las variables y sus tipos
+                        System.out.println("Variables de la función " + analisis.getExpresion() + ": ");
+                        for (VariableF variable : variablesF) {
+                            System.out.println(variable);
+                        }
 
-                            // Verificar si hay un operador en la expresión
-                            if (j + 2 < lista_expresiones.size()) {
-                                operador = lista_expresiones.get(j + 2).getExpresion();
+                        // Verificar límite
+                        if (j + 1 >= lista_expresiones.size()) break;
 
-                            } else {
-                                operador = null; // No hay operador
-                            }
+                        String tipoR = null;
+                        String operador;
 
-                            // Verificar si la expresión después de return es una operación
-                            if (esOperadorMatematico (operador)) {
-                                if (j + 3 >= lista_expresiones.size()) break; // Verificar límite
-                                String operando1 = lista_expresiones.get(j + 1).getExpresion();
-                                String operando2 = lista_expresiones.get(j + 3).getExpresion(); // Asumimos que hay un operador en j+2
+                        // Verificar si hay un operador en la expresión
+                        if (j + 2 < lista_expresiones.size()) {
+                            operador = lista_expresiones.get(j + 2).getExpresion();
+
+                        } else {
+                            operador = null; // No hay operador
+                        }
+
+                        // Verificar si la expresión después de return es una operación
+                        if (esOperadorMatematico(operador)) {
+                            int indiceOperador = j + 1; // Comienza después del 'return'
+
+                            // Mientras haya operadores y expresiones válidas por procesar
+                            while (indiceOperador + 2 < lista_expresiones.size() && esOperadorMatematico(lista_expresiones.get(indiceOperador + 1).getExpresion())) {
+                                String operando1 = lista_expresiones.get(indiceOperador).getExpresion();
+                                String operando2 = lista_expresiones.get(indiceOperador + 2).getExpresion(); // Siguiente operando
+
+                                // Obtener los tipos de los operandos
                                 String tipoOperando1 = obtenerTipoF(operando1);
                                 String tipoOperando2 = obtenerTipoF(operando2);
 
-
-
                                 // Determinar el tipo resultante de la operación
-                                tipoR = obtenerTipoResultado( tipoOperando1 , tipoOperando2);
-                            } else {
-                                tipoR = obtenerTipo(analisisResultado.getExpresion());
+                                if (tipoR == null) {
+                                    tipoR = obtenerTipoResultado(tipoOperando1, tipoOperando2); // Primera operación
+                                } else {
+                                    tipoR = obtenerTipoResultado(tipoR, tipoOperando2); // Acumular el tipo de la operación
+                                }
+
+                                // Avanzar para la siguiente operación
+                                indiceOperador += 2; // Salta al siguiente operador
                             }
 
+                        } else {
+
+                            String operando1 = lista_expresiones.get(j + 1).getExpresion();
+                            String tipoOperando1 = obtenerTipoF(operando1);
+
+                            tipoR = tipoOperando1;
+
+                        }
+
+                        // Verificar si el tipoF es void y omitir la comparación
+                        if (tipoF.equals("void")) {
+                            System.out.println("Tipo de retorno 'void', no se realiza comparación.");
+                        }
+                        // Verificar si el tipoF es boolean y hacer la comparación solo si el tipoR es null
+                        else if (tipoF.equals("boolean")) {
+                            if (tipoR == null) {
+                                // Mostrar alerta de error semántico si el tipoR es null
+                                mostrarAlerta("Error Semántico", "El tipo de retorno de la función no puede ser 'null' para boolean.");
+                            }
+                        }
+                        // Realizar la comparación normal para otros tipos
+                        else {
+                            if (tipoR == null) {
+                                // Mostrar alerta de error semántico si el tipoR es null
+                                mostrarAlerta("Error Semántico", "El tipo de retorno de la función no puede ser 'null'");
+                            }
                             // Comparar el tipo esperado (tipoF) con el tipo real de retorno (tipoR)
                             if (!tipoF.equals(tipoR)) {
                                 // Mostrar alerta de error semántico si los tipos son diferentes
@@ -452,10 +528,7 @@ public class semantico {
                                 // Imprimir mensaje si el tipo de retorno es correcto
                                 System.out.println("Tipo de retorno correcto para la función: " + tipoF);
                             }
-
-                            break; // Detener la búsqueda cuando se encuentra el return
-
-
+                        }
                     }
                 }
             }
