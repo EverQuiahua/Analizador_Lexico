@@ -7,6 +7,8 @@ import javafx.scene.control.Alert.AlertType;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
+import java.util.List;
+import java.util.ArrayList;
 
 public class semantico {
     private HelloController helloController;
@@ -234,8 +236,58 @@ public class semantico {
     // ---------------------------------------------------------------------------------------------------------
 
 
-    // -----------------------------------------------------------------------------------
+    // --------------------------------------------------------------------------------------------------
     //2. Verificación de la existencia de variables y funciones
+    private void verificarExistenciaVariablesYFunciones(ObservableList<Analisis> lista_expresiones) {
+        for (int i = 0; i < lista_expresiones.size(); i++) {
+            Analisis analisis = lista_expresiones.get(i);
+            String expresion = analisis.getExpresion();
+            String tipo = analisis.getTipo();
+
+            // Verificar si es una variable
+            if (tipo.equals("Variable")) {
+                if (!variables.containsKey(expresion)) {
+                    mostrarAlerta("Error Semántico", "La variable '" + expresion + "' no ha sido declarada.");
+                }
+            }
+
+            // Verificar si es una función
+            if (tipo.equals("Funcion")) {
+                // Simulamos una verificación de funciones, en un caso real necesitaríamos un mapa de funciones
+                if (!funcionExiste(expresion)) {
+                    mostrarAlerta("Error Semántico", "La función '" + expresion + "' no ha sido declarada.");
+                } else {
+                    // Verificamos la firma de la función (número y tipos de parámetros)
+                    if (!verificarFirmaFuncion(expresion, obtenerParametrosFuncion(lista_expresiones, i))) {
+                        mostrarAlerta("Error Semántico", "Los parámetros de la función '" + expresion + "' no coinciden con su declaración.");
+                    }
+                }
+            }
+        }
+    }
+
+    // Función para simular la existencia de una función (esto se ampliaría en un caso real)
+    private boolean funcionExiste(String nombreFuncion) {
+        // Aquí se verificaría en una lista/mapa de funciones si la función existe
+        return true; // Simulación de que la función existe
+    }
+
+    // Función para verificar que la firma de la función (número y tipos de parámetros) coincida
+    private boolean verificarFirmaFuncion(String nombreFuncion, List<String> parametros) {
+        // Aquí se verificarían los parámetros con la declaración real de la función
+        return true; // Simulación de que la firma de la función es correcta
+    }
+
+    // Función para obtener los parámetros de la función llamada en la expresión
+    private List<String> obtenerParametrosFuncion(ObservableList<Analisis> lista_expresiones, int indice) {
+        List<String> parametros = new ArrayList<>();
+        // Lógica para extraer los parámetros de la lista_expresiones a partir del índice
+        // Se podría buscar hasta encontrar los paréntesis que indican los parámetros
+        return parametros;
+    }
+
+
+
 
 
     // Aqui va el codigo
@@ -243,7 +295,7 @@ public class semantico {
     // FIN 2. Verificación de la existencia de variables y funciones
     //-------------------------------------------------
 
-    // -----------------------------------------------------------------------------------
+    // --------------------------------------------------------------------------------------------------
     // 3. Control de alcance (Scope)
     // HOLA HERI
     //Hola everaldo
@@ -280,6 +332,41 @@ public class semantico {
 
     // -----------------------------------------------------------------------------------
     // 6. Verificación de la compatibilidad de tipos en expresiones
+// 6. Verificación de la compatibilidad de tipos en expresiones
+    private void verificarCompatibilidadTiposEnExpresiones(ObservableList<Analisis> lista_expresiones) {
+        for (int i = 0; i < lista_expresiones.size(); i++) {
+            String expresion = lista_expresiones.get(i).getExpresion();
+
+            // Verificar si la expresión es un operador matemático
+            if (esOperadorMatematico(expresion)) {
+                // Obtener los operandos antes y después del operador
+                if (i - 1 >= 0 && i + 1 < lista_expresiones.size()) {
+                    String operandoIzq = lista_expresiones.get(i - 1).getExpresion();
+                    String operandoDer = lista_expresiones.get(i + 1).getExpresion();
+
+                    // Obtener los tipos de los operandos
+                    String tipoIzq = obtenerTipo(operandoIzq);
+                    String tipoDer = obtenerTipo(operandoDer);
+
+                    // Verificar si los tipos son compatibles para la operación
+                    if (!sonTiposCompatibles(tipoIzq, tipoDer)) {
+                        mostrarAlerta("Error Semántico",
+                                "Tipos incompatibles en la operación: " + operandoIzq + " " + expresion + " " + operandoDer);
+                    } else {
+                        System.out.println("Operación válida: " + operandoIzq + " " + expresion + " " + operandoDer);
+
+                        // Verificación específica para la división por cero
+                        if (expresion.equals("/") && operandoDer.equals("0")) {
+                            mostrarAlerta("Error Semántico",
+                                    "División por cero: " + operandoIzq + " " + expresion + " " + operandoDer);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
 
     // Aquí va el código para garantizar que todas las operaciones
     // involucradas en las expresiones sean semánticamente correctas.
@@ -336,12 +423,52 @@ public class semantico {
     // -----------------------------------------------------------------------------------
     // 11. Gestión de declaraciones y definiciones múltiples
 
+
+
     // Aquí va el código para detectar declaraciones duplicadas de variables o funciones.
     // Si una variable o función es declarada dos veces en el mismo ámbito,
     // el compilador debe emitir un error semántico.
 
     // FIN 11. Gestión de declaraciones y definiciones múltiples
     //-------------------------------------------------
+// 11. Gestión de declaraciones y definiciones múltiples
+    private void gestionarDeclaracionesYDefinicionesMultiples(ObservableList<Simbolos> tablaSimbolos) {
+        // HashMaps para rastrear variables y funciones
+        HashMap<String, Integer> variablesPorAmbito = new HashMap<>();
+        HashMap<String, String> funcionesDefinidas = new HashMap<>();
+
+        for (Simbolos simbolo : tablaSimbolos) {
+            String nombre = simbolo.getNombre();
+            String tipo = simbolo.getTipo();
+            String ambito = simbolo.getAmbito(); // El ámbito en el que está declarada la variable o función
+
+            // Verificar si es una variable
+            if (simbolo.getCategoria().equals("variable")) {
+                String claveVariable = ambito + "-" + nombre; // Usamos ámbito y nombre como clave
+                if (variablesPorAmbito.containsKey(claveVariable)) {
+                    // Ya existe una declaración de la variable en este ámbito
+                    mostrarAlerta("Error Semántico",
+                            "Variable '" + nombre + "' ya declarada en el ámbito '" + ambito + "'");
+                } else {
+                    // Registrar la variable en el ámbito
+                    variablesPorAmbito.put(claveVariable, 1);
+                }
+            }
+
+            // Verificar si es una función
+            if (simbolo.getCategoria().equals("funcion")) {
+                String firmaFuncion = simbolo.getFirma(); // Obtener la firma de la función (nombre + tipos de parámetros)
+                if (funcionesDefinidas.containsKey(nombre)) {
+                    // Ya existe una definición de la función con ese nombre
+                    mostrarAlerta("Error Semántico",
+                            "Función '" + nombre + "' ya definida.");
+                } else {
+                    // Registrar la función
+                    funcionesDefinidas.put(nombre, firmaFuncion);
+                }
+            }
+        }
+    }
 
 
     // -----------------------------------------------------------------------------------------------------------------------
