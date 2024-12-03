@@ -1070,19 +1070,20 @@ public class semantico {
         for (int i = 0; i < lista_expresiones.size(); i++) {
             Analisis exprActual = lista_expresiones.get(i);
 
+            // Verificamos la estructura de la conversión
             if (exprActual.getTipo().equals("Variable") &&
                     i + 1 < lista_expresiones.size() &&
                     lista_expresiones.get(i + 1).getExpresion().equals("=") &&
                     i + 2 < lista_expresiones.size() &&
-                    lista_expresiones.get(i + 2).getExpresion().equals("(") && // Verificamos la conversión
+                    lista_expresiones.get(i + 2).getExpresion().equals("(") && // Verificamos el inicio de la conversión
                     i + 3 < lista_expresiones.size() &&
-                    esTipoDeDato(lista_expresiones.get(i + 3).getExpresion()) && // Verificar cualquier tipo de dato válido
+                    esTipoDeDato(lista_expresiones.get(i + 3).getExpresion()) && // Verificar tipo de dato válido
                     i + 4 < lista_expresiones.size() &&
                     lista_expresiones.get(i + 4).getExpresion().equals(")") &&
                     i + 5 < lista_expresiones.size() &&
                     lista_expresiones.get(i + 5).getTipo().equals("Variable")) {
 
-                // Obtener el tipo de conversión (int, double, etc.)
+                // Obtener el tipo de conversión (por ejemplo: int, double, etc.)
                 String tipoConversion = lista_expresiones.get(i + 3).getExpresion();
 
                 // Obtener el tipo de la variable destino
@@ -1095,8 +1096,8 @@ public class semantico {
                 String tipoFuente = obtenerTipo(variableFuente);
                 System.out.println("Tipo de fuente: " + tipoFuente);
 
-                // Verificar si el tipo de conversión es compatible
-                if (!sonTiposCompatibles(tipoFuente, tipoConversion) || !sonTiposCompatibles(tipoConversion, tipoDestino)) {
+                // Verificar si la conversión es válida y segura
+                if (!esConversionSegura(tipoFuente, tipoConversion) || !esConversionSegura(tipoConversion, tipoDestino)) {
                     String mensaje = "Conversión inválida: No se puede convertir de '" + tipoFuente +
                             "' a '" + tipoConversion + "', o de '" + tipoConversion +
                             "' a '" + tipoDestino + "'.";
@@ -1105,9 +1106,9 @@ public class semantico {
                     System.out.println("Conversión válida de " + tipoFuente + " a " + tipoConversion + ", y luego a " + tipoDestino + ".");
                 }
             }
-
         }
     }
+
     private boolean esConversionSegura(String tipoOrigen, String tipoDestino) {
         // Manejo de casos nulos
         if (tipoOrigen == null || tipoDestino == null) {
@@ -1163,7 +1164,7 @@ public class semantico {
         // Por defecto, si no coincide con ninguna regla, la conversión no es segura
         return false;
     }
-
+    
 
 
 
