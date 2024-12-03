@@ -4,13 +4,8 @@ import javafx.collections.ObservableList;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.regex.Pattern;
-import java.util.List;
-import java.util.ArrayList;
+import java.util.*;
+
 
 public class semantico {
     private HelloController helloController;
@@ -35,10 +30,16 @@ public class semantico {
             System.out.println("--------------------");  // Separador entre cada análisis
         }
 
-        verificarRetornoFuncion(lista_expresiones);
+
         verificarTipos(lista_expresiones);
         verificarOperaciones(lista_expresiones);
         asignacion_op(lista_expresiones);
+        coherencia_parametros(lista_expresiones);
+        variablesdeclaradas(lista_expresiones);
+        controlDeflujo(lista_expresiones);
+        control_alcance(lista_expresiones);
+        verificarRetornoFuncion(lista_expresiones);
+        conversionTipos(lista_expresiones);
     }
 
 
@@ -51,47 +52,36 @@ public class semantico {
             String expresion = analisis.getExpresion();
             String tipo = analisis.getTipo();
 
+
             // Verifica si es una palabra reservada y si es una declaración de variable
-            if (new Palabra_Reservada().isPalabraReservada(expresion)) {
+            if (new Palabra_Reservada().isPalabraReservada(expresion) && esTipoDeDato(expresion)) {
+                String valor = lista_expresiones.get(i + 3).getExpresion();
+                String tipoVariable = expresion; // La palabra reservada (ejemplo: "int", "String", etc.)
+                String nombreVariable = lista_expresiones.get(i + 1).getExpresion(); // Nombre de la variable
                 // Esperamos que la siguiente expresión sea el nombre de la variable
                 if (i + 1 < lista_expresiones.size() && lista_expresiones.get(i + 1).getTipo().equals("Variable")) {
+                    variables.put(nombreVariable, new VariableInfo(tipoVariable, nombreVariable,valor));
                     // siguiente elemento de asignación
                     if (i + 2 < lista_expresiones.size() && lista_expresiones.get(i + 2).getExpresion().equals("=")) {
                         // siguiente elemento valor o una variable
                         if (i + 3 < lista_expresiones.size()) {
-                            String valor = lista_expresiones.get(i + 3).getExpresion();
-                            String tipoVariable = expresion; // La palabra reservada (ejemplo: "int", "String", etc.)
-                            String nombreVariable = lista_expresiones.get(i + 1).getExpresion(); // Nombre de la variable
 
                             // Verificar si el valor es una función
-                            if (lista_expresiones.get(i + 3).getTipo().equals("Función")) {
+                            if (lista_expresiones.get(i + 3).getTipo().equals("Función") ||lista_expresiones.get(i + 3).getTipo().equals("Símbolo")  ) {
                                 System.out.println("Se ha encontrado una función en la asignación, omitiendo la verificación de asignación.");
                                 // Puedes agregar aquí alguna lógica si quieres hacer algo con la función.
                             } else if (lista_expresiones.get(i + 3).getTipo().equals("Variable")) {
-                                // El valor es una variable, no es necesario hacer las verificaciones de comillas
-                                variables.put(nombreVariable, new VariableInfo(tipoVariable, nombreVariable));
 
-                                // Imprime el contenido del mapa 'variables' en consola
-                                for (Map.Entry<String, VariableInfo> entry : variables.entrySet()) {
-                                    VariableInfo info = entry.getValue();
-                                    System.out.println("Variable: " + info.getNombre() + ", Tipo: " + info.getTipo());
-                                }
-                            } else {
+                            }
+                            else {
                                 // Verifica si es un String
                                 if (tipoVariable.equals("String")) {
                                     if (!lista_expresiones.get(i + 3).getExpresion().equals("\"") ||
                                             !lista_expresiones.get(i + 5).getExpresion().equals("\"")) {
                                         mostrarAlerta("Error Semántico",
                                                 "Asignación inválida: " + tipoVariable + " " + nombreVariable + " = " + valor);
-                                    } else {
-                                        // Si la asignación es válida, guarda la variable con su tipo y nombre
-                                        variables.put(nombreVariable, new VariableInfo(tipoVariable, nombreVariable));
 
-                                        // Imprime el contenido del mapa 'variables' en consola
-                                        for (Map.Entry<String, VariableInfo> entry : variables.entrySet()) {
-                                            VariableInfo info = entry.getValue();
-                                            System.out.println("Variable: " + info.getNombre() + ", Tipo: " + info.getTipo());
-                                        }
+                                        //variables.put(nombreVariable, new VariableInfo(tipoVariable, nombreVariable));
                                     }
                                 } else if (tipoVariable.equals("char")) {
                                     String valor2 = lista_expresiones.get(i + 4).getExpresion();
@@ -101,41 +91,69 @@ public class semantico {
                                         if (!esValorCompatible("char", valor2)) {
                                             mostrarAlerta("Error Semántico",
                                                     "Asignación inválida: " + tipoVariable + " " + nombreVariable);
-                                        } else {
-                                            System.out.println("Asignación válida para char: " + nombreVariable + " = " + valor2);
-                                            // Si la asignación es válida, guarda la variable con su tipo y nombre
-                                            variables.put(nombreVariable, new VariableInfo(tipoVariable, nombreVariable));
 
-                                            // Imprime el contenido del mapa 'variables' en consola
-                                            for (Map.Entry<String, VariableInfo> entry : variables.entrySet()) {
-                                                VariableInfo info = entry.getValue();
-                                                System.out.println("Variable: " + info.getNombre() + ", Tipo: " + info.getTipo());
-                                            }
+                                            //variables.put(nombreVariable, new VariableInfo(tipoVariable, nombreVariable));
                                         }
                                 } else {
                                     // Verifica si el valor es compatible con el tipo de variable
                                     if (!esValorCompatible(tipoVariable, valor)) {
                                         mostrarAlerta("Error Semántico",
-                                                "Asignación inválida pp: " + tipoVariable + " " + nombreVariable + " = " + valor);
-                                    } else {
-                                        // Si la asignación es válida, guarda la variable con su tipo y nombre
-                                        variables.put(nombreVariable, new VariableInfo(tipoVariable, nombreVariable));
+                                                "Asignación inválida : " + tipoVariable + " " + nombreVariable + " = " + valor);
 
-                                        // Imprime el contenido del mapa 'variables' en consola
-                                        for (Map.Entry<String, VariableInfo> entry : variables.entrySet()) {
-                                            VariableInfo info = entry.getValue();
-                                            System.out.println("Variable: " + info.getNombre() + ", Tipo: " + info.getTipo());
-                                        }
+                                        //variables.put(nombreVariable, new VariableInfo(tipoVariable, nombreVariable));
                                     }
                                 }
                             }
                         }
 
-
                     }
+
                 }
             }
         }
+
+        for (int i = 0; i < lista_expresiones.size(); i++) {
+            Analisis exprActual = lista_expresiones.get(i);
+
+            // Detectar una asignación de tipo: Variable = Variable
+            if (exprActual.getTipo().equals("Variable") &&
+                    i + 1 < lista_expresiones.size() &&
+                    lista_expresiones.get(i + 1).getExpresion().equals("=") &&
+                    i + 2 < lista_expresiones.size() &&
+                    lista_expresiones.get(i + 2).getTipo().equals("Variable")) {
+
+                // Obtener el nombre y tipo de la variable destino
+                String variableDestino = exprActual.getExpresion();
+                String tipoDestino = obtenerTipo(variableDestino);
+                System.out.println(tipoDestino);
+
+                // Obtener el nombre y tipo de la variable fuente
+                String variableFuente = lista_expresiones.get(i + 2).getExpresion();
+                String tipoFuente = obtenerTipo(variableFuente);
+                System.out.println(tipoFuente);
+
+
+                    // Verificar compatibilidad de tipos
+                    boolean resultado = sonTiposCompatibles(tipoFuente, tipoDestino);
+
+                    System.out.println("Compatibles: " + resultado); // Esto imprimirá: Compatibles: false
+                    if (!sonTiposCompatibles(tipoDestino, tipoFuente)) {
+                        String mensaje = "La variable '" + variableDestino +
+                                "' de tipo '" + tipoDestino + "' no es compatible con la asignación de '" +
+                                variableFuente + "' de tipo '" + tipoFuente + "'.";
+                        mostrarAlerta("Error Semántico", mensaje);
+                    }
+
+
+            }
+        }
+        // Imprime el contenido del mapa 'variables' en consola
+        for (Map.Entry<String, VariableInfo> entry : variables.entrySet()) {
+            VariableInfo info = entry.getValue();
+            System.out.println("Variable Prueba For: " + info.getNombre() + ", Tipo: " + info.getTipo() + ", Valor : " + info.getValor());
+        }
+
+
     }
 
     private void verificarOperaciones(ObservableList<Analisis> lista_expresiones) {
@@ -153,13 +171,20 @@ public class semantico {
 
                     // Si es la primera operación, usamos los operandos iniciales
                     if (tipoResultadoAcumulado == null) {
-                        operandoIzq = lista_expresiones.get(i - 1).getExpresion(); // Primer operando
+                        operandoIzq = lista_expresiones.get(i - 1).getExpresion();// Primer operando
+                        if (!lista_expresiones.get(i - 1).getTipo().equals("Variable")) {
+                            return; // Si el operador izquierdo no es de tipo "variable", termina la verificación
+                        }
+
                     } else {
                         // Usamos el tipo acumulado como el operando izquierdo
                         operandoIzq = tipoResultadoAcumulado;
                     }
 
                     String operandoDer = lista_expresiones.get(i + 1).getExpresion(); // Segundo operando
+                    if (!lista_expresiones.get(i + 1).getTipo().equals("Variable")) {
+                        return;
+                    }
 
                     // Obtener los tipos de los operandos
                     String tipoIzq = (tipoResultadoAcumulado == null) ? obtenerTipo(operandoIzq) : tipoResultadoAcumulado;
@@ -172,7 +197,7 @@ public class semantico {
                         // Verificar si los tipos son compatibles para la operación matemática
                         if (!sonTiposCompatibles(tipoIzq, tipoDer)) {
                             mostrarAlerta("Error Semántico",
-                                    "Tipos incompatibles en la operación: " + operandoIzq + " " + expresion + " " + operandoDer);
+                                    "Tipos incompatibles en la operación : " + operandoIzq + " " + expresion + " " + operandoDer);
                             return; // Detenemos la verificación si hay un error de tipos
                         } else {
                             System.out.println("Operación válida: " + operandoIzq + " " + expresion + " " + operandoDer);
@@ -187,7 +212,7 @@ public class semantico {
             }
         }
 
-        // Aquí podrías validar si el tipo acumulado es compatible con el tipo final esperado (si es necesario)
+        // Validar si el tipo acumulado es compatible con el tipo final esperado (si es necesario)
         if (tipoResultadoAcumulado != null) {
             System.out.println("Tipo final resultante de la expresión: " + tipoResultadoAcumulado);
         }
@@ -195,6 +220,11 @@ public class semantico {
 
     private boolean esOperadorMatematico(String expresion) {
         return expresion.equals("+") || expresion.equals("-") || expresion.equals("*") || expresion.equals("/");
+    }
+    // Función para verificar si una expresión es un tipo de dato válido
+    private boolean esTipoDeDato(String expresion) {
+        return expresion.equals("int") || expresion.equals("char") || expresion.equals("String") ||
+                expresion.equals("double") || expresion.equals("float") || expresion.equals("boolean");
     }
 
     private String obtenerTipo(String variable) {
@@ -254,17 +284,22 @@ public class semantico {
     // Clase interna para almacenar información de variables
     private static class VariableInfo {
         private String tipo;
-
         private String nombre;
-        public VariableInfo(String tipo, String nombre) {
+        private String valor;
+
+        public VariableInfo(String tipo, String nombre, String valor) {
             this.tipo = tipo;
             this.nombre = nombre;
+            this.valor = valor;
         }
         public String getTipo() {
             return tipo;
         }
         public String getNombre () {
             return nombre;
+        }
+        public String getValor () {
+            return valor;
         }
     }
 
@@ -274,72 +309,238 @@ public class semantico {
 
     // --------------------------------------------------------------------------------------------------
     //2. Verificación de la existencia de variables y funciones
-    private void verificarExistenciaVariablesYFunciones(ObservableList<Analisis> lista_expresiones) {
+    private void variablesdeclaradas(ObservableList<Analisis> lista_expresiones) {
+        List<VariableFuncion> listaFunciones = new ArrayList<>(); // Lista de funciones con sus variables
+        VariableFuncion funcionActual = null;
+
         for (int i = 0; i < lista_expresiones.size(); i++) {
             Analisis analisis = lista_expresiones.get(i);
-            String expresion = analisis.getExpresion();
-            String tipo = analisis.getTipo();
 
-            // Verificar si es una variable
-            if (tipo.equals("Variable")) {
-                if (!variables.containsKey(expresion)) {
-                    mostrarAlerta("Error Semántico", "La variable '" + expresion + "' no ha sido declarada.");
+            if (analisis.getTipo().equals("Función")) {
+                funcionActual = new VariableFuncion(analisis.getExpresion());
+                listaFunciones.add(funcionActual);
+                Stack<String> pilaLlaves = new Stack<>();
+                Stack<String> pilaparentesis = new Stack<>();
+                boolean funcionCerrada = false;
+
+                for (int j = i; j < lista_expresiones.size() && !funcionCerrada; j++) {
+                    Analisis exprActual = lista_expresiones.get(j);
+
+                    // Detección de parámetros entre paréntesis
+                    if (exprActual.getExpresion().equals("(")) {
+                        pilaparentesis.push("(");
+                    } else if (exprActual.getExpresion().equals(")")) {
+                        if (pilaparentesis.size() == 1) {
+                            System.out.println("Fin de la función: " + funcionActual.getNombreFuncion() + " en línea " + exprActual.getRenglon());
+                        } else {
+                            if (!pilaparentesis.isEmpty()) {
+                                pilaparentesis.pop();
+                            }
+                        }
+                    }
+                    // Detección del inicio del cuerpo de la función
+                    if (exprActual.getExpresion().equals("{")) {
+                        pilaLlaves.push("{");
+                    } else if (exprActual.getExpresion().equals("}")) {
+                        if (pilaLlaves.size() == 1) {
+                            funcionCerrada = true;
+                            System.out.println("Fin de la función: " + funcionActual.getNombreFuncion() + " en línea " + exprActual.getRenglon());
+                        } else {
+                            if (!pilaLlaves.isEmpty()) {
+                                pilaLlaves.pop();
+                            }
+                        }
+                    }
+
+                    if (!pilaLlaves.isEmpty() || !pilaparentesis.isEmpty() ) {
+                        // Agregar variables locales y parámetros sin duplicar
+                        if (j + 3 < lista_expresiones.size()
+                                && (lista_expresiones.get(j).getExpresion().equals("int")
+                                || lista_expresiones.get(j).getExpresion().equals("double")
+                                || lista_expresiones.get(j).getExpresion().equals("float")
+                                || lista_expresiones.get(j).getExpresion().equals("char")
+                                || lista_expresiones.get(j).getExpresion().equals("boolean")
+                                || lista_expresiones.get(j).getExpresion().equals("String"))
+                                && lista_expresiones.get(j + 1).getTipo().equals("Variable")) {
+                            String nombreVariable = lista_expresiones.get(j + 1).getExpresion();
+                            funcionActual.agregarVariableDeclarada(nombreVariable);
+                        }
+                    }
                 }
             }
+        }
 
-            // Verificar si es una función
-            if (tipo.equals("Funcion")) {
-                // Simulamos una verificación de funciones, en un caso real necesitaríamos un mapa de funciones
-                if (!funcionExiste(expresion)) {
-                    mostrarAlerta("Error Semántico", "La función '" + expresion + "' no ha sido declarada.");
-                } else {
-                    // Verificamos la firma de la función (número y tipos de parámetros)
-                    if (!verificarFirmaFuncion(expresion, obtenerParametrosFuncion(lista_expresiones, i))) {
-                        mostrarAlerta("Error Semántico", "Los parámetros de la función '" + expresion + "' no coinciden con su declaración.");
-                    }
+        // Imprimir las variables declaradas por función
+        for (VariableFuncion funcion : listaFunciones) {
+            System.out.println("Función " + funcion.getNombreFuncion() + " tiene variables declaradas: " + funcion.getVariablesDeclaradas());
+        }
+        // Verificar si hay variables duplicadas por función
+        for (VariableFuncion funcion : listaFunciones) {
+            List<String> variablesDeclaradas = funcion.getVariablesDeclaradas();
+            Set<String> setVariables = new HashSet<>();
+
+            for (String variable : variablesDeclaradas) {
+                if (!setVariables.add(variable)) {
+                    mostrarAlerta("Error Semántico", "La variable '" + variable + "' ya está declarada en la función " + funcion.getNombreFuncion());
                 }
             }
         }
     }
 
-    // Función para simular la existencia de una función (esto se ampliaría en un caso real)
-    private boolean funcionExiste(String nombreFuncion) {
-        // Aquí se verificaría en una lista/mapa de funciones si la función existe
-        return true; // Simulación de que la función existe
+    class VariableFuncion {
+        private String nombreFuncion;
+        private List<String> variablesDeclaradas;
+        private List<String> variablesUsadas;
+
+        public VariableFuncion(String nombreFuncion) {
+            this.nombreFuncion = nombreFuncion;
+            this.variablesDeclaradas = new ArrayList<>();
+            this.variablesUsadas = new ArrayList<>();
+        }
+
+        public String getNombreFuncion() {
+            return nombreFuncion;
+        }
+
+        public List<String> getVariablesDeclaradas() {
+            return variablesDeclaradas;
+        }
+
+        public List<String> getVariablesUsadas() {
+            return variablesUsadas;
+        }
+
+        public void agregarVariableDeclarada(String variable) {
+            variablesDeclaradas.add(variable); // No hacer verificación, se agregan todas
+        }
+
     }
 
-    // Función para verificar que la firma de la función (número y tipos de parámetros) coincida
-    private boolean verificarFirmaFuncion(String nombreFuncion, List<String> parametros) {
-        // Aquí se verificarían los parámetros con la declaración real de la función
-        return true; // Simulación de que la firma de la función es correcta
-    }
-
-    // Función para obtener los parámetros de la función llamada en la expresión
-    private List<String> obtenerParametrosFuncion(ObservableList<Analisis> lista_expresiones, int indice) {
-        List<String> parametros = new ArrayList<>();
-        // Lógica para extraer los parámetros de la lista_expresiones a partir del índice
-        // Se podría buscar hasta encontrar los paréntesis que indican los parámetros
-        return parametros;
-    }
-
-
-
-
-
-    // Aqui va el codigo
 
     // FIN 2. Verificación de la existencia de variables y funciones
     //-------------------------------------------------
 
     // --------------------------------------------------------------------------------------------------
     // 3. Control de alcance (Scope)
-    // HOLA HERI
-    //Hola everaldo
-    // cambios
-    // Aquí va el código para verificar el alcance de las variables y funciones.
-    // Se asegura que las variables y funciones sean usadas solo dentro de su alcance.
-    // Si una variable local es usada fuera de la función donde fue declarada,
-    // debe producirse un error.
+    private void control_alcance(ObservableList<Analisis> lista_expresiones) {
+        Map<String, List<String>> variablesFuncion = new HashMap<>(); // Mapa para las variables de la función
+        Map<String, List<String>> variablesUsadas = new HashMap<>(); // Mapa para las variables usadas
+        String funcionActual = null;
+
+        for (int i = 0; i < lista_expresiones.size(); i++) {
+            Analisis analisis = lista_expresiones.get(i);
+
+            if (analisis.getTipo().equals("Función")) {
+                funcionActual = analisis.getExpresion();
+                Stack<String> pilaLlaves = new Stack<>();
+                Stack<String> pilaparentesis = new Stack<>();
+                boolean funcionCerrada = false;
+
+                // Inicializamos la lista de variables para la función actual
+                variablesFuncion.putIfAbsent(funcionActual, new ArrayList<>());
+                variablesUsadas.putIfAbsent(funcionActual, new ArrayList<>()); // Inicializamos la lista de variables usadas
+
+                for (int j = i; j < lista_expresiones.size() && !funcionCerrada; j++) {
+                    Analisis exprActual = lista_expresiones.get(j);
+
+                    // Detección de parámetros entre paréntesis
+                    if (exprActual.getExpresion().equals("(")) {
+                        pilaparentesis.push("(");  // Agregamos llave de apertura
+                    } else if (exprActual.getExpresion().equals(")")) {
+                        if (pilaparentesis.size() == 1) {
+                            System.out.println("Fin de la función: " + funcionActual + " en línea " + exprActual.getRenglon());
+                        } else {
+                            if (!pilaparentesis.isEmpty()) {
+                                pilaparentesis.pop();  // Cerramos la última llave abierta
+                            }
+                        }
+                    }
+                    // Solo buscar variables en los parámetros si estamos dentro de los paréntesis
+                    if (!pilaparentesis.isEmpty()) {
+                        // Detecta la declaración de variable con el patrón: int nombreVariable
+                        if (j + 3 < lista_expresiones.size()
+                                && lista_expresiones.get(j).getTipo().equals("Palabra Reservada")
+                                && lista_expresiones.get(j + 1).getTipo().equals("Variable")) {
+
+                            String variable = lista_expresiones.get(j + 1).getExpresion();
+                            if (!variablesFuncion.get(funcionActual).contains(variable)) {
+                                variablesFuncion.get(funcionActual).add(variable); // Agrega variable de parámetro si no existe
+                            }
+                        }
+                    }
+
+                    // Detección del inicio del cuerpo de la función
+                    if (exprActual.getExpresion().equals("{")) {
+                        pilaLlaves.push("{");  // Agregamos llave de apertura
+                    } else if (exprActual.getExpresion().equals("}")) {
+                        if (pilaLlaves.size() == 1) {
+                            funcionCerrada = true;  // La función se ha cerrado
+                            System.out.println("Fin de la función: " + funcionActual + " en línea " + exprActual.getRenglon());
+                        } else {
+                            if (!pilaLlaves.isEmpty()) {
+                                pilaLlaves.pop();  // Cerramos la última llave abierta
+                            }
+                        }
+                    }
+
+                    // Solo buscar variables en el cuerpo de la función si estamos dentro de las llaves
+                    if (!pilaLlaves.isEmpty()) {
+                        // Detecta la declaración de variable con el patrón: int nombreVariable = valor;
+                        if (j + 3 < lista_expresiones.size()
+                                && (lista_expresiones.get(j).getExpresion().equals("int")
+                                || lista_expresiones.get(j).getExpresion().equals("double")
+                                || lista_expresiones.get(j).getExpresion().equals("float")
+                                || lista_expresiones.get(j).getExpresion().equals("char")
+                                || lista_expresiones.get(j).getExpresion().equals("boolean")
+                                || lista_expresiones.get(j).getExpresion().equals("String"))
+                                && lista_expresiones.get(j + 1).getTipo().equals("Variable")) {
+                            String nombreVariable = lista_expresiones.get(j + 1).getExpresion(); // Nombre de la variable
+
+                                // Si no existe, agregar la variable a la lista de declaradas
+                                variablesFuncion.get(funcionActual).add(nombreVariable);
+                            // Aquí buscamos las variables usadas en expresiones como: variable = ...
+                            if (exprActual.getTipo().equals("Variable")) {
+                                String variableUsada = exprActual.getExpresion();
+                                if (!variablesUsadas.get(funcionActual).contains(variableUsada)) {
+                                    variablesUsadas.get(funcionActual).add(variableUsada); // Agrega variable usada si no existe
+                                }
+                            }
+                        }
+
+
+                    }
+                }
+
+                // Verificación de errores semánticos
+                verificarVa(funcionActual, variablesFuncion, variablesUsadas);
+            }
+        }
+
+        // Imprimir el mapa de funciones y sus variables declaradas
+        for (Map.Entry<String, List<String>> entry : variablesFuncion.entrySet()) {
+            System.out.println("Función: " + entry.getKey() + " tiene variables declaradas: " + entry.getValue());
+        }
+
+        // Imprimir el mapa de funciones y sus variables usadas
+        for (Map.Entry<String, List<String>> entry : variablesUsadas.entrySet()) {
+            System.out.println("Función: " + entry.getKey() + " tiene variables usadas: " + entry.getValue());
+        }
+    }
+
+    // Metodo para verificar errores semánticos
+    private void verificarVa(String funcionActual,
+                                            Map<String, List<String>> variablesFuncion,
+                                            Map<String, List<String>> variablesUsadas) {
+        List<String> variablesDeclaradas = variablesFuncion.get(funcionActual);
+        List<String> variablesUtilizadas = variablesUsadas.get(funcionActual);
+
+        for (String variableUsada : variablesUtilizadas) {
+            if (!variablesDeclaradas.contains(variableUsada)) {
+                // Código para mostrar alerta de error semántico
+                mostrarAlerta("Error Semántico", "La variable '" + variableUsada + "' no puede ser usada en la función '" + funcionActual + "'.");
+            }
+        }
+    }
 
     // FIN 3. Control de alcance (Scope)
     //-------------------------------------------------
@@ -347,68 +548,259 @@ public class semantico {
     // -----------------------------------------------------------------------------------
     // 4. Verificación de la coherencia de parámetros en funciones
 
-    // Aquí va el código para verificar que las funciones sean llamadas
-    // con el número correcto de parámetros y tipos adecuados.
-    // Si una función espera 3 parámetros y se le pasan 2 o los tipos no coinciden,
-    // se generará un error semántico.
+    private void coherencia_parametros(ObservableList<Analisis> lista_expresiones) {
+            Stack<String> pilaParentesis = new Stack<>();
+            List<FuncionInfo> funcionesList = new ArrayList<>(); // Cambiado a List para permitir funciones repetidas
+            String nombreFuncion = null;
 
+            for (int i = 0; i < lista_expresiones.size(); i++) {
+                Analisis analisis = lista_expresiones.get(i);
+
+                if (analisis.getTipo().equals("Función")) {
+                    // Obtener los elementos anteriores en la lista
+                    String publi = lista_expresiones.get(i - 3).getExpresion();
+                    String stati = lista_expresiones.get(i - 2).getExpresion();
+                    nombreFuncion = analisis.getExpresion();
+
+                    // Determinar si es declaración o llamada
+                    String tipoDeclaracion;
+                    if ((publi.equals("public") || publi.equals("private")) &&
+                            (stati.equals("static") || stati.equals("void") || stati.equals("int") || stati.equals("double"))) {
+                        tipoDeclaracion = "Declarada";
+                    } else {
+                        tipoDeclaracion = "Llamada";
+                    }
+
+                    // Crear nueva función con la información adicional y agregar a la lista
+                    funcionesList.add(new FuncionInfo(nombreFuncion, 0, "", tipoDeclaracion));
+                }
+
+                // Detección de apertura de paréntesis para capturar parámetros
+                if (analisis.getExpresion().equals("(") && nombreFuncion != null) {
+                    pilaParentesis.push("(");
+                }
+                // Detección de cierre de paréntesis
+                else if (analisis.getExpresion().equals(")") && !pilaParentesis.isEmpty()) {
+                    pilaParentesis.pop();
+                    if (pilaParentesis.isEmpty()) {
+                        nombreFuncion = null; // Reinicia nombre de función una vez que se cierran los paréntesis
+                    }
+                }
+
+                // Almacenar variables solo dentro de los paréntesis de la función
+                if (nombreFuncion != null && !pilaParentesis.isEmpty()) {
+                    if (analisis.getTipo().equals("Variable")) {
+                        String variable = analisis.getExpresion();
+                        // Buscar la última función añadida (la más reciente) en la lista
+                        FuncionInfo funcionInfo = funcionesList.get(funcionesList.size() - 1);
+
+                        // Verificar si la variable no está ya en la lista
+                        if (!funcionInfo.getVariables().contains(variable)) {
+                            // Agregar variable y actualizar número de parámetros
+                            String variablesActualizadas = funcionInfo.getVariables().isEmpty()
+                                    ? variable
+                                    : funcionInfo.getVariables() + ", " + variable;
+                            funcionInfo.variables = variablesActualizadas;
+                            funcionInfo.numParametro = String.valueOf(funcionInfo.getNumParametroInt() + 1);
+                        }
+                    }
+                }
+            }
+            for (FuncionInfo funcionInfo : funcionesList) {
+                System.out.println("Función: " + funcionInfo.getNombre());
+                System.out.println("Número de parámetros: " + funcionInfo.getNumParametro());
+                System.out.println("Variables en paréntesis: " + funcionInfo.getVariables());
+                System.out.println("Tipo: " + funcionInfo.getTipoDeclaracion());
+            }
+        Map<String, List<FuncionInfo>> funcionesAgrupadas = new HashMap<>();
+
+        // Agrupar funciones por nombre
+        for (FuncionInfo funcionInfo : funcionesList) {
+            funcionesAgrupadas
+                    .computeIfAbsent(funcionInfo.getNombre(), k -> new ArrayList<>())
+                    .add(funcionInfo);
+        }
+
+        // Verificar funciones agrupadas
+        for (Map.Entry<String, List<FuncionInfo>> entry : funcionesAgrupadas.entrySet()) {
+            List<FuncionInfo> funciones = entry.getValue();
+
+            // Comprobar si hay funciones repetidas
+            if (funciones.size() > 1) {
+                int cantidadDeclaradas = 0;
+
+                for (int i = 0; i < funciones.size(); i++) {
+                    FuncionInfo funcA = funciones.get(i);
+
+                    // Contar cuántas veces está declarada la función
+                    if (funcA.getTipoDeclaracion().equals("Declarada")) {
+                        cantidadDeclaradas++;
+
+                        // Si hay más de una declaración de la misma función, muestra un error semántico
+                        if (cantidadDeclaradas > 1) {
+                            String mensaje = "Error Semántico: La función '" + funcA.getNombre() +
+                                    "' está declarada más de una vez.";
+                            mostrarAlerta("Error Semántico", mensaje);
+                            break;  // Salir del ciclo si ya detectamos un duplicado
+                        }
+                    }
+
+                    // Comparar funciones declaradas con llamadas
+                    for (int j = 0; j < funciones.size(); j++) {
+                        if (i != j) {
+                            FuncionInfo funcB = funciones.get(j);
+
+                            // Solo comparar si funcA es una función declarada y funcB es una llamada
+                            if (funcA.getTipoDeclaracion().equals("Declarada") && funcB.getTipoDeclaracion().equals("Llamada")) {
+
+                                // Comparar el número de parámetros
+                                if (!funcA.getNumParametro().equals(funcB.getNumParametro())) {
+                                    String mensaje = "La función '" + funcA.getNombre() +
+                                            "' espera " + funcA.getNumParametro() + " parámetros, " +
+                                            "pero recibe " + funcB.getNumParametro() + " parámetros.";
+                                    mostrarAlerta("Error Semántico", mensaje);
+                                }
+
+                                // Comparar los tipos de las variables (asumiendo que las variables están separadas por comas)
+                                String[] variablesA = funcA.getVariables().split(", ");
+                                String[] variablesB = funcB.getVariables().split(", ");
+
+                                // Comparar tipos de variables
+                                for (int k = 0; k < Math.min(variablesA.length, variablesB.length); k++) {
+                                    String tipoA = obtenerTipo(variablesA[k].trim());
+                                    String tipoB = obtenerTipo(variablesB[k].trim());
+
+                                    if (tipoA != null && tipoB != null && !tipoA.equals(tipoB)) {
+                                        String mensaje = "La variable '" + variablesA[k].trim() +
+                                                "' en la función '" + funcA.getNombre() + "' se espera que sea de tipo '" +
+                                                tipoA + "', pero se ha definido como '" + tipoB + "' en la llamada.";
+                                        mostrarAlerta("Error Semántico", mensaje);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        }
+    // Clase interna para almacenar información de funciones
+    private static class FuncionInfo {
+        private String nombre;
+        private String numParametro;
+        private String variables;
+        private String tipoDeclaracion; // Nuevo atributo para indicar si es declaración o llamada
+
+        public FuncionInfo(String nombre, int numParametro, String variables, String tipoDeclaracion) {
+            this.nombre = nombre;
+            this.numParametro = String.valueOf(numParametro);
+            this.variables = variables;
+            this.tipoDeclaracion = tipoDeclaracion;
+        }
+
+        public String getNombre() {
+            return nombre;
+        }
+
+        public String getNumParametro() {
+            return numParametro;
+        }
+
+        public int getNumParametroInt() {
+            return Integer.parseInt(numParametro);
+        }
+
+        public String getVariables() {
+            return variables;
+        }
+
+        public String getTipoDeclaracion() {
+            return tipoDeclaracion;
+        }
+    }
     // FIN 4. Verificación de la coherencia de parámetros en funciones
     //-------------------------------------------------
 
     // -----------------------------------------------------------------------------------
     // 5. Control de flujo de datos
 
-    // Aquí va el código para verificar el flujo lógico del programa.
-    // Se debe asegurar que las estructuras de control como if, for, while
-    // estén correctamente definidas. Por ejemplo, verificar que en un ciclo for
-    // no se alteren indebidamente las variables que controlan el ciclo.
+    private void  controlDeflujo(ObservableList<Analisis> lista_expresiones) {
+        Stack<String> pilaparentesis = new Stack<>();
+        List<String> ListaVariables = new ArrayList<>();
+        String est = "";
+        for (int j = 0; j < lista_expresiones.size(); j++) {
+            Analisis analisis = lista_expresiones.get(j);
+
+            // Verificar si el análisis es un bucle o condicional
+            if (analisis.getTipo().equals("Palabra Reservada") &&
+                    (analisis.getExpresion().equals("while") ||
+                            analisis.getExpresion().equals("for") ||
+                            analisis.getExpresion().equals("if") ||
+                            analisis.getExpresion().equals("else"))) {
+
+                // Manejo de paréntesis
+                if (j + 1 < lista_expresiones.size() && lista_expresiones.get(j + 1).getExpresion().equals("(")) {
+                    est = lista_expresiones.get(j).getExpresion();
+                    System.out.println(est);
+                    pilaparentesis.push("("); // Agrega un paréntesis abierto a la pila
+                }
+            }
+
+            // Solo buscar variables en los parámetros si estamos dentro de los paréntesis
+            if (!pilaparentesis.isEmpty()) {
+                // Manejo de paréntesis de cierre
+                if (analisis.getExpresion().equals(")")) {
+                    if (!pilaparentesis.isEmpty()) {
+                        pilaparentesis.pop(); // Quita el paréntesis abierto correspondiente
+
+                        for (int i = 0; i < ListaVariables.size(); i++) {
+                            String variable = ListaVariables.get(i); // Obtener la variable actual
+                            String tipoV = obtenerTipo(variable); // Obtener el tipo de la variable
+                            System.out.println("Tipo de " + variable + ": " + tipoV);
+
+                            // Comprobar con el siguiente elemento si existe
+                            if (i + 1 < ListaVariables.size()) {
+                                String siguienteVariable = ListaVariables.get(i + 1);
+                                String tipoSiguiente = obtenerTipo(siguienteVariable); // Obtener el tipo de la siguiente variable
+
+                                // Verificar la compatibilidad de tipos
+                                boolean sonCompatibles = sonTiposCompatibles(tipoV, tipoSiguiente);
+                                System.out.println("¿Son compatibles " + tipoV + " y " + tipoSiguiente + "? " + sonCompatibles);
+                                // Si no son compatibles, mostrar una alerta
+                                if (!sonCompatibles) {
+                                    String titulo = "Error Semántico";
+                                    String mensaje = "Error: Los tipos '" + tipoV + "' y '" + tipoSiguiente + "' no coinciden  en la estructura : " + est;
+                                    mostrarAlerta(titulo, mensaje);
+                                }
+                            }
+                        }
+
+                    }
+                } else {
+                    // Detecta la declaración de variable
+                    if (j + 1 < lista_expresiones.size() &&
+                            lista_expresiones.get(j + 1).getTipo().equals("Variable")) {
+
+                        String variable = lista_expresiones.get(j + 1).getExpresion();
+
+
+                        // Almacena la variable en la pila
+                        if (!ListaVariables.contains(variable)) {
+                            ListaVariables.add(variable); // Agrega variable de parámetro si no existe
+                        }
+                    }
+                }
+
+            }
+        }
+
+    }
 
     // FIN 5. Control de flujo de datos
     //-------------------------------------------------
 
     // -----------------------------------------------------------------------------------
     // 6. Verificación de la compatibilidad de tipos en expresiones
-// 6. Verificación de la compatibilidad de tipos en expresiones
-    private void verificarCompatibilidadTiposEnExpresiones(ObservableList<Analisis> lista_expresiones) {
-        for (int i = 0; i < lista_expresiones.size(); i++) {
-            String expresion = lista_expresiones.get(i).getExpresion();
-
-            // Verificar si la expresión es un operador matemático
-            if (esOperadorMatematico(expresion)) {
-                // Obtener los operandos antes y después del operador
-                if (i - 1 >= 0 && i + 1 < lista_expresiones.size()) {
-                    String operandoIzq = lista_expresiones.get(i - 1).getExpresion();
-                    String operandoDer = lista_expresiones.get(i + 1).getExpresion();
-
-                    // Obtener los tipos de los operandos
-                    String tipoIzq = obtenerTipo(operandoIzq);
-                    String tipoDer = obtenerTipo(operandoDer);
-
-                    // Verificar si los tipos son compatibles para la operación
-                    if (!sonTiposCompatibles(tipoIzq, tipoDer)) {
-                        mostrarAlerta("Error Semántico",
-                                "Tipos incompatibles en la operación: " + operandoIzq + " " + expresion + " " + operandoDer);
-                    } else {
-                        System.out.println("Operación válida: " + operandoIzq + " " + expresion + " " + operandoDer);
-
-                        // Verificación específica para la división por cero
-                        if (expresion.equals("/") && operandoDer.equals("0")) {
-                            mostrarAlerta("Error Semántico",
-                                    "División por cero: " + operandoIzq + " " + expresion + " " + operandoDer);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-
-
-    // Aquí va el código para garantizar que todas las operaciones
-    // involucradas en las expresiones sean semánticamente correctas.
-    // Se revisa que las operaciones matemáticas no generen errores de incompatibilidad,
-    // como sumar un entero con un carácter, lo cual es inválido.
-
     // FIN 6. Verificación de la compatibilidad de tipos en expresiones
     //-------------------------------------------------
 
@@ -525,7 +917,7 @@ public class semantico {
                                 // Si la variable no está en la lista, agregarla
                                 if (!existe) {
                                     variablesF.add(new VariableF(expresion, tipoVariable));
-                                    variables.put(expresion, new VariableInfo(tipoVariable, expresion));
+                                    variables.put(expresion, new VariableInfo(tipoVariable, expresion,null));
                                 }
                             }
 
@@ -674,11 +1066,107 @@ public class semantico {
 
     // -----------------------------------------------------------------------------------
     // 10. Compatibilidad y conversión de tipos
+    private void conversionTipos(ObservableList<Analisis> lista_expresiones) {
+        for (int i = 0; i < lista_expresiones.size(); i++) {
+            Analisis exprActual = lista_expresiones.get(i);
 
-    // Aquí va el código para manejar la conversión implícita de tipos,
-    // como convertir un int a float de manera segura.
-    // También se debe evitar conversiones peligrosas como convertir un float a int
-    // sin advertencias sobre la pérdida de precisión.
+            if (exprActual.getTipo().equals("Variable") &&
+                    i + 1 < lista_expresiones.size() &&
+                    lista_expresiones.get(i + 1).getExpresion().equals("=") &&
+                    i + 2 < lista_expresiones.size() &&
+                    lista_expresiones.get(i + 2).getExpresion().equals("(") && // Verificamos la conversión
+                    i + 3 < lista_expresiones.size() &&
+                    esTipoDeDato(lista_expresiones.get(i + 3).getExpresion()) && // Verificar cualquier tipo de dato válido
+                    i + 4 < lista_expresiones.size() &&
+                    lista_expresiones.get(i + 4).getExpresion().equals(")") &&
+                    i + 5 < lista_expresiones.size() &&
+                    lista_expresiones.get(i + 5).getTipo().equals("Variable")) {
+
+                // Obtener el tipo de conversión (int, double, etc.)
+                String tipoConversion = lista_expresiones.get(i + 3).getExpresion();
+
+                // Obtener el tipo de la variable destino
+                String variableDestino = exprActual.getExpresion();
+                String tipoDestino = obtenerTipo(variableDestino);
+                System.out.println("Tipo de destino: " + tipoDestino);
+
+                // Obtener el tipo de la variable fuente
+                String variableFuente = lista_expresiones.get(i + 5).getExpresion();
+                String tipoFuente = obtenerTipo(variableFuente);
+                System.out.println("Tipo de fuente: " + tipoFuente);
+
+                // Verificar si el tipo de conversión es compatible
+                if (!sonTiposCompatibles(tipoFuente, tipoConversion) || !sonTiposCompatibles(tipoConversion, tipoDestino)) {
+                    String mensaje = "Conversión inválida: No se puede convertir de '" + tipoFuente +
+                            "' a '" + tipoConversion + "', o de '" + tipoConversion +
+                            "' a '" + tipoDestino + "'.";
+                    mostrarAlerta("Error Semántico", mensaje);
+                } else {
+                    System.out.println("Conversión válida de " + tipoFuente + " a " + tipoConversion + ", y luego a " + tipoDestino + ".");
+                }
+            }
+
+        }
+    }
+    private boolean esConversionSegura(String tipoOrigen, String tipoDestino) {
+        // Manejo de casos nulos
+        if (tipoOrigen == null || tipoDestino == null) {
+            return false; // Conversión insegura si alguno de los tipos es nulo
+        }
+
+        // Conversión segura entre el mismo tipo
+        if (tipoOrigen.equals(tipoDestino)) {
+            return true;
+        }
+
+        // Reglas de conversión implícita
+        switch (tipoOrigen) {
+            case "int":
+                // Un int puede convertirse implícitamente a float o double (sin pérdida de precisión)
+                return tipoDestino.equals("float") || tipoDestino.equals("double");
+
+            case "float":
+                // Un float puede convertirse implícitamente a double (sin pérdida de precisión)
+                if (tipoDestino.equals("double")) return true;
+                // Convertir un float a int es inseguro (se requiere conversión explícita)
+                if (tipoDestino.equals("int")) {
+                    System.out.println("Advertencia: Posible pérdida de precisión al convertir de float a int.");
+                    return false;
+                }
+                break;
+
+            case "double":
+                // Un double puede convertirse explícitamente a float o int (se requiere advertencia)
+                if (tipoDestino.equals("float") || tipoDestino.equals("int")) {
+                    System.out.println("Advertencia: Posible pérdida de precisión al convertir de double a " + tipoDestino + ".");
+                    return false;
+                }
+                break;
+
+            case "char":
+                // Un char puede convertirse implícitamente a int (representación numérica del carácter)
+                return tipoDestino.equals("int") || tipoDestino.equals("String");
+
+            case "String":
+                // Un String no puede convertirse a otros tipos, excepto a otro String
+                return tipoDestino.equals("String");
+
+            case "boolean":
+                // Un boolean no es convertible a otros tipos
+                return tipoDestino.equals("boolean");
+
+            default:
+                // Tipo desconocido, conversión insegura
+                return false;
+        }
+
+        // Por defecto, si no coincide con ninguna regla, la conversión no es segura
+        return false;
+    }
+
+
+
+
 
     // FIN 10. Compatibilidad y conversión de tipos
     //-------------------------------------------------
@@ -695,45 +1183,6 @@ public class semantico {
     // FIN 11. Gestión de declaraciones y definiciones múltiples
     //-------------------------------------------------
 // 11. Gestión de declaraciones y definiciones múltiples
-    private void gestionarDeclaracionesYDefinicionesMultiples(ObservableList<Simbolos> tablaSimbolos) {
-        // HashMaps para rastrear variables y funciones
-        HashMap<String, Integer> variablesPorAmbito = new HashMap<>();
-        HashMap<String, String> funcionesDefinidas = new HashMap<>();
-
-        for (Simbolos simbolo : tablaSimbolos) {
-            String nombre = simbolo.getNombre();
-            String tipo = simbolo.getTipo();
-            String ambito = simbolo.getAmbito(); // El ámbito en el que está declarada la variable o función
-
-            // Verificar si es una variable
-            if (simbolo.getCategoria().equals("variable")) {
-                String claveVariable = ambito + "-" + nombre; // Usamos ámbito y nombre como clave
-                if (variablesPorAmbito.containsKey(claveVariable)) {
-                    // Ya existe una declaración de la variable en este ámbito
-                    mostrarAlerta("Error Semántico",
-                            "Variable '" + nombre + "' ya declarada en el ámbito '" + ambito + "'");
-                } else {
-                    // Registrar la variable en el ámbito
-                    variablesPorAmbito.put(claveVariable, 1);
-                }
-            }
-
-            // Verificar si es una función
-            if (simbolo.getCategoria().equals("funcion")) {
-                String firmaFuncion = simbolo.getFirma(); // Obtener la firma de la función (nombre + tipos de parámetros)
-                if (funcionesDefinidas.containsKey(nombre)) {
-                    // Ya existe una definición de la función con ese nombre
-                    mostrarAlerta("Error Semántico",
-                            "Función '" + nombre + "' ya definida.");
-                } else {
-                    // Registrar la función
-                    funcionesDefinidas.put(nombre, firmaFuncion);
-                }
-            }
-        }
-    }
-
-
     // -----------------------------------------------------------------------------------------------------------------------
     // Código para mostrar alerta de error semántico
     private void mostrarAlerta(String titulo, String mensaje) {
